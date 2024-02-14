@@ -9,14 +9,35 @@
     #  2. The videos title, description, and first 10 tags if they exist to see if it is something you may be interested in.
     # 3. The videos like to dislike ratio to see if it is worth watching or not.
 
+#need to do:
+    # 1. make a ist of 64 random youtube ids, Test to see if they are valid, for error handling
+
+#run it throug a loop, and add to each of the lists the video info.
+
+
 import scrapetube
 import pandas as pd
 import random
 import csv
 import copy
 from random import shuffle
+import time
+import pytube
+from pytube import YouTube
+from pytube import Playlist
+from pytube import Channel
+from pytube import extract
+from pytube import request
+import requests
+from  requests import get
+from bs4 import BeautifulSoup
+import datetime
 
-
+def add_two_lists_elements(list1, list2):  
+    """Summary:
+    Add two lists elements together.
+    """
+    return [x + y for x, y in zip(list1, list2)]
 
 def random_youtube_id_generator()->str:
     """Summary:
@@ -55,56 +76,109 @@ def random_youtube_id_generator()->str:
     list11 = add_list_elements_together(acceptable_characters, list10)
     return list11
 
-
-def find_video_info_e(video_id: str)->dict: #experimental
+def add_to_dict(List1 : list)->dict:
     """Summary:
-    This function will take a youtube video id and return a dictionary with the video's title, description, and first 10 tags if they exist.
+    This function will add the 64 generated youtube ids to a dictionary, with the key being the id, and the value the list filled with ids.
     """
-    video_info = scrapetube.get_video_info(video_id)
+    dictionary = {}
+    for id in List1:
+        dictionary[id] = List1
+    return dictionary
+
+def find_video_info(video_id: str)->dict:
+    """Summary: 
+        Creates a youtube object using the pytube module and gets the title, description, and tags of the video.
+        
+        """
+    video = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+    video_info = {"title": video.title, "description": video.description, "tags": video.keywords}
     return video_info
 
-video_ID = "ZpnnXMdvpMA"
-video_info = find_video_info_e(video_ID)
-print(video_info)
+# print(find_video_info("ZpnnXMdvpMA"))
 
-def find_video_like_dislike_ratio_e(video_id: str)->dict: #experimental
+
+def find_video_info_d(video_id: str)->dict:
     """Summary:
-    This function will take a youtube video id and return a dictionary with the video's like to dislike ratio.
+    This function will take a youtube video id and return a dictionary with the 'ID','Video URL', 'Video Title', 'Video Author','Video Publish Date', and "Duration"
     """
-    video_like_dislike_ratio = scrapetube.get_video_like_dislike_ratio(video_id)
-    return video_like_dislike_ratio
+    video = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+    video_info = {"ID": video_id, "Video URL": f"https://www.youtube.com/watch?v={video_id}", "Video Title": video.title, "Video Author": video.author, "Video Publish Date": video.publish_date, "Duration": video.length}
+    return video_info
 
 
 
-def find video_title(video_id: str)->str:
-    video_dict = {}
-    for video in videos:
-        title = video["title"]["runs"][0]["text"]
-        try:
-            author = video["shortBylineText"]["runs"][0]["text"]
-        except KeyError:
-            author = "Error"
-        url = "https://www.youtube.com/playlist?list=" + str(video["videoId"])
-        duration = video["lengthText"]["simpleText"]
-        video_dict[url] = {"title": title,"author": author,"duration": duration, "url": url}  # Add the title and url to the dictionary
-    #It goes directory[directory], then the keys in the directory directory, in the order they are listed for the CVS file.
+def convert_datetime_to_month_day_year(date: datetime.datetime)->str:
+    """Summary:
+    This function will take a datetime object and return a string with the month, day, and year.
+    """
+    return date.strftime("%B %d, %Y")
 
-    df = pd.DataFrame.from_dict(video_dict, orient='index')#convert the dictionary to a dataframe with pandas
-    filename = input("what do you want to name the csv file? ")
-    filename = str(filename)
-    df.to_csv(f'{filename}.csv', header=False, encoding='utf-8')
+varible = find_video_info_d("ZpnnXMdvpMA")
+varible["Video Publish Date"] = convert_datetime_to_month_day_year(varible["Video Publish Date"])
+varible["Duration"] = str(datetime.timedelta(seconds=varible["Duration"]))
 
 
 
-def write_cvs_6_lists(id: list, video_urls: list, video_titles: list , video_author: list, video_publish_date: list , duration: list):
-    """Summery:
-    This function will write a csv file with the first row being 'ID', the second row being the video urls, the third row being 'Video Title', the fourth row being  video titles, the fifth row being video author, and the last row being video publish date.
-    This will only work for lists, not dictionaries.
+
+def find_video_tags(video_id: str)->list:
+    """Summary:
+    This function will take a youtube video id and return a list with the first 10 tags if they exist.
+    #this will shorten the tags to 200 characters, and replace the commas with spaces.
+    """
+    html = requests.get(f"https://www.youtube.com/watch?v={video_id}")
+    soup = BeautifulSoup(html.text, 'html.parser')
+    get_tags = soup.find('meta', {'name': 'keywords'})
+    get_tags = str(get_tags)
+    get_tags = get_tags.replace('<meta content="', "")
+    get_tags = get_tags.replace('" name="keywords"/>', "")  
+    get_tags = list(get_tags)
+    # get_tags = get_tags[250:]
+    if len(get_tags) > 200:
+        get_tags = get_tags[:200]#this is to limit the tags to 250 characters starting from the beginning of the list
+    else:
+        get_tags = get_tags
+    get_tags = "".join(get_tags)
+    get_tags = get_tags.replace(",", "  ")
+    # get_tags = str(get_tags)
+    return get_tags
+id = []
+video_URL = []
+Video_Title  = []
+Video_Author = []
+Video_Publish_Date = []
+Video_Duration = []
+Video_Tags = []
+
+varible["Tags"] = find_video_tags("ZpnnXMdvpMA")
+
+id.append(varible["ID"])
+video_URL.append(varible["Video URL"])
+Video_Title.append(varible["Video Title"])
+Video_Author.append(varible["Video Author"])
+Video_Publish_Date.append(varible["Video Publish Date"])
+Video_Duration.append(varible["Duration"])
+Video_Tags.append(varible["Tags"])
+
+
+
+
+
+
+# print(find_video_tags("ZpnnXMdvpMA"))
+
+def write_cvs_7_from_list(id, video_urls, video_titles, video_author, video_publish_date, duration, tags):
+    """Summary:
+    This function will write a csv file with the first row being 'ID', the second row being the video urls, the third row being 'Video Title', the fourth row being  video titles, the fifth row being video author, the 6th row being video publish date.
+    This will only work for dictionaries, not lists.
     """
     writer = csv.writer(open('playlist.csv', 'w', newline='', encoding='utf-8'))# the newline='' is to fix the double spacing
-    writer.writerow(['ID','Video URL', 'Video Title', 'Video Author','Video Publish Date', "Duration"])
-    for ID, url, title, video_author, video_publish_date, duration in zip(id, video_urls, video_titles, video_author, video_publish_date, duration):
-        writer.writerow([ID, url, title, video_author, video_publish_date, duration])
+    writer.writerow(['ID','Video URL', 'Video Title', 'Video Author','Video Publish Date', "Duration", "Tags"])
+    for id, video_url, video_title, video_author, video_publish_date, video_duration, video_tags in zip(id, video_urls, video_titles, video_author, video_publish_date, duration, tags):
+        writer.writerow([id, video_url, video_title, video_author, video_publish_date, video_duration, video_tags])
+
+
+write_cvs_7_from_list(id, video_URL, Video_Title, Video_Author, Video_Publish_Date, Video_Duration, Video_Tags)
+
 
 
 
